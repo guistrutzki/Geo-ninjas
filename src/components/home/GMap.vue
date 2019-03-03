@@ -6,6 +6,7 @@
 
 <script>
 import firebase from 'firebase'
+import db from '@/firebase/init'
 export default {
     name: 'GMap',
     data(){
@@ -26,8 +27,41 @@ export default {
         }
     },
     mounted(){
-        this.renderMap()
-        console.log(firebase.auth().currentUser.uid)
+        // get current user
+        let user = firebase.auth().currentUser
+
+        //get user geolocation
+        if(navigator.geolocation){
+            navigator.geolocation.getCurrentPosition((position)=>{
+                this.lat = position.coords.latitude
+                this.lng = position.coords.longitude
+
+                //find the user record and then update geocoords
+                db.collection('users').where('user_id', '==', user.uid).get()
+                    .then((snapshot)=>{
+                        snapshot.forEach((doc)=>{
+                            // console.log(doc.id)
+                            db.collection('users').doc(doc.id).update({
+                                geolocation: {
+                                    lat: position.coords.latitude,
+                                    lng: position.coords.longitude
+                                }
+                            })
+                        })
+                    })
+                    .then(()=>{
+                        this.renderMap()
+                    })
+
+                
+            }, (error)=>{
+                console.log(error)
+                this.renderMap()
+            }, {maximumAge: 60000, timeout: 3000})
+        } else {
+            // position center by default values
+            this.renderMap()
+        }
     }
 }
 </script>
